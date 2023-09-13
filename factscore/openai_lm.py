@@ -7,8 +7,29 @@ import numpy as np
 import logging
 
 class OpenAIModel(LM):
-
     def __init__(self, model_name, cache_file=None, key_path="api.key"):
+        self.attribute_prompts = [
+            'Which of the below facts mention a birth date? Do not output words, just output the fact number or None (e.g., "0", or "7", or "None"). If there are multiple mentions, just output the first. Do not mention birth places, or other dates that are not related to birthdays.\n\n',
+            'Which of the below facts mention a date of death? Do not output words, just output the fact number or None (e.g., "0", or "7", or "None"). If there are multiple mentions, just output the first. Do not mention death places, death locations, or any other dates that are not related to date of death.\n\n',
+            'Which of the below facts mention place of birth? Do not output words, just output the fact number or None (e.g., "0", or "7", or "None"). If there are multiple mentions, just output the first. Do not mention birth dates, birth locations, or any other locations that are not related to places of birth.\n\n',
+            'Which of the below facts mention place of death? Do not output words, just output the fact number or None (e.g., "0", or "7", or "None"). If there are multiple mentions, just output the first. Do not mention death dates, death locations, or any other locations that are not related to places of death.\n\n'
+        ]
+        self.attributes = [
+            'Birthday',
+            'Deathday',
+            'Place of birth',
+            'Place of death'
+        ]
+        # TODO
+        # chatgpt_base_prompt = 'places they moved to'
+        # chatgpt_base_prompt = 'occupation'
+        # chatgpt_base_prompt = 'nationality'
+        # chatgpt_base_prompt = 'awards'
+        # chatgpt_base_prompt = 'family members'
+        # chatgpt_base_prompt = 'names of books, movies, or songs that they contributed to'
+        # chatgpt_base_prompt = 'school attended'
+        # chatgpt_base_prompt = 'major or area of study in school'
+        # chatgpt_base_prompt = 'cause of death'
         self.model_name = model_name
         self.key_path = key_path
         self.temp = 0.0
