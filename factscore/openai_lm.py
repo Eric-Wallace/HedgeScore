@@ -11,7 +11,7 @@ class OpenAIModel(LM):
     def __init__(self, model_name, cache_file=None, key_path="api.key"):
         self.model_name = model_name
         self.key_path = key_path
-        self.temp = 0.7
+        self.temp = 0.0
         self.save_interval = 100
         super().__init__(cache_file)
 

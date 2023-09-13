@@ -13,6 +13,30 @@ from factscore.npm import NPM
 from factscore.openai_lm import OpenAIModel
 from factscore.retrieval import DocDB, Retrieval
 
+# chatgpt_base_prompt = """Which of the below facts mention the birth date (NOT THE BIRTH PLACE!)? Do not output words, just output the fact number or None. If there are multiple mentions, just output the first.
+
+# Example 1: 
+# Fact 1: George Washington died on December 14, 1799.
+# Fact 2: George Washington was an American.
+# Fact 3: George Washington was a military officer.
+# Fact 4: George Washington was born in Virginia.
+# Fact 5: George Washington born on March 20th, 1732.
+
+# Output 1: 5
+
+# Example 2:
+# Fact 1: Eric Wallace is a research scientist.
+# Fact 2: Eric's earliest work was published in 1983.
+# Fact 3: Eric Wallace was a student at Berkeley.
+# Fact 4: Eric's first band was form in 1980.
+
+# Output 2: None
+
+# Example 3:
+# """
+
+chatgpt_base_prompt = 'Which of the below facts mention a birth date? Do not output words, just output the fact number or None (e.g., "0", or "7", or "None"). If there are multiple mentions, just output the first. Do not mention birth places, or other dates that are not related to birthday.\n\n'
+
 class FactScorer(object):
 
     def __init__(self,
@@ -50,6 +74,7 @@ class FactScorer(object):
             self.lm = OpenAIModel("ChatGPT",
                                   cache_file=os.path.join(cache_dir, "ChatGPT.pkl"),
                                   key_path=openai_key)
+            self.lm.load_model()
         else:
             self.lm = None
 
@@ -108,6 +133,7 @@ class FactScorer(object):
                   atomic_facts=None,
                   knowledge_source=None,
                   verbose=False):
+        global chatgpt_base_prompt
         if knowledge_source is None:
             # use the default knowledge source
             knowledge_source = "enwiki-20230401"
@@ -141,6 +167,8 @@ class FactScorer(object):
                 topics = tqdm(topics)
 
             atomic_facts = []
+            birthday_locations = []
+            birthday_mentions = 0.0
             for topic, gen in zip(topics, generations):
                 # optionally, first detect if the response is abstained
                 response_abstained = is_response_abstained(gen, self.abstain_detection_type)
@@ -156,6 +184,26 @@ class FactScorer(object):
                     atomic_facts.append(curr_afs)
                 if len(atomic_facts) % 10 == 0:
                     self.af_generator.save_cache()
+
+                ## DETECT WHERE THE BIRTHDAY FACTS ARE
+                chatgpt_prompt = chatgpt_base_prompt
+                for index, fact in enumerate(curr_afs):
+                    chatgpt_prompt = chatgpt_prompt + 'Fact ' + str(index) + ': ' + fact + '\n'
+                chatgpt_prompt = chatgpt_prompt + "\nAnswer:"
+                
+                birthday_location = self.lm._generate(chatgpt_prompt)[0]
+                print(gen)
+                print()
+                print(chatgpt_prompt)
+                print()
+                print(birthday_location)
+                if birthday_location == 'None':
+                    birthday_location = None
+                elif len(birthday_location) > 2:
+                    print('weird output', birthday_location)
+                else:
+                    birthday_mentions += 1
+                    birthday_locations.append(birthday_location)
 
             assert len(atomic_facts)==len(topics)
             self.af_generator.save_cache()
@@ -177,13 +225,16 @@ class FactScorer(object):
         scores = []
         init_scores = []
         decisions = []
-        for topic, generation, facts in zip(topics, generations, atomic_facts):
+        birthday_scores = []
+        for topic, generation, facts, birthday_location in zip(topics, generations, atomic_facts, birthday_locations):
             if facts is None:
                 decisions.append(None)
             else:
                 decision = self._get_score(topic, generation, facts, knowledge_source)
                 score = np.mean([d["is_supported"] for d in decision])
-                
+                if birthday_location is not None:
+                    birthday_scores.append(decision[int(birthday_location)]['is_supported'])
+
                 if gamma:
                     init_scores.append(score)
                     penalty = 1.0 if len(facts)>gamma else np.exp(1-gamma/len(facts))
@@ -193,6 +244,9 @@ class FactScorer(object):
                 scores.append(score)
                 if len(scores) % 10 == 0:
                     self.save_cache()
+
+        print('Birthday Precision', sum(birthday_scores) / birthday_mentions)
+        print('Birthday Count', birthday_mentions)
 
         self.save_cache()
 
