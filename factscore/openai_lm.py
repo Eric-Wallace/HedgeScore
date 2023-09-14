@@ -18,16 +18,33 @@ class OpenAIModel(LM):
             'Birthday',
             'Deathday',
             'Place of birth',
-            'Place of death'
+            'Place of death',
+            'Occupation',
+            'Nationality',
+            'School Attended',
+            'Book, Movie, Song, Art Piece',
+            'Awards Won',
+            'Cause of Death',
+            'Place of Work'
         ]
+        self.batched_attribute_prompts = """For each of the above facts, which of them mention a (1) birth date, (2) death date, (3) place of birth, (4) place of death, (5) occupation, (6) nationality, (7) school that they attended, (8) book, movie, song, or art piece that they made, (9) awards won, (10) cause of death, and (11) place of work? Do not output words, just output the fact number or None (e.g., "0", or "7", or "None"). If there are multiple mentions, just output the first.
+
+Birth Date:
+Death Date:
+Place of Birth:
+Place of Death:
+Occupation:
+Nationality:
+School Attended:
+Book, Movie, Song, Art Piece:
+Awards Won:
+Cause of Death:
+Place of Work:"""
         # TODO
         # chatgpt_base_prompt = 'places they moved to'
-        # chatgpt_base_prompt = 'occupation'
-        # chatgpt_base_prompt = 'nationality'
         # chatgpt_base_prompt = 'awards'
         # chatgpt_base_prompt = 'family members'
         # chatgpt_base_prompt = 'names of books, movies, or songs that they contributed to'
-        # chatgpt_base_prompt = 'school attended'
         # chatgpt_base_prompt = 'major or area of study in school'
         # chatgpt_base_prompt = 'cause of death'
         self.model_name = model_name

@@ -183,24 +183,42 @@ class FactScorer(object):
                     self.af_generator.save_cache()
                     self.lm.save_cache()
 
-                print('getting attribute locations')
+                # different calls per attribute
+                # attribute_locations = []
+                # for prompt in self.lm.attribute_prompts:
+                #     chatgpt_prompt = prompt
+                #     for index, fact in enumerate(curr_afs):
+                #         chatgpt_prompt = chatgpt_prompt + 'Fact ' + str(index) + ': ' + fact + '\n'
+                #     chatgpt_prompt = chatgpt_prompt + "\nAnswer:"
+                #     attribute_location = self.lm.generate(chatgpt_prompt)[0]
+                #     if attribute_location == 'None':
+                #         attribute_location = None
+                #     elif len(attribute_location) > 2:
+                #         print('weird output', attribute_location)
+                #         attribute_location = None
+                #     else:
+                #         attribute_location = attribute_location
+                #     attribute_locations.append(attribute_location)
+                # all_attribute_locations.append(attribute_locations)
+                # one mega call for all attributes
                 attribute_locations = []
-                for prompt in self.lm.attribute_prompts:
-                    chatgpt_prompt = prompt
-                    for index, fact in enumerate(curr_afs):
-                        chatgpt_prompt = chatgpt_prompt + 'Fact ' + str(index) + ': ' + fact + '\n'
-                    chatgpt_prompt = chatgpt_prompt + "\nAnswer:"
-                    attribute_location = self.lm.generate(chatgpt_prompt)[0]
-                    if attribute_location == 'None':
+                chatgpt_prompt = ''
+                for index, fact in enumerate(curr_afs):
+                    chatgpt_prompt = chatgpt_prompt + 'Fact ' + str(index) + ': ' + fact + '\n'
+                chatgpt_prompt += '\n' + self.lm.batched_attribute_prompts
+
+                possible_locations = self.lm.generate(chatgpt_prompt)[0].split('\n')
+                for location in possible_locations:
+                    location = location.split(' ')[-1]
+                    if location == 'None':
                         attribute_location = None
-                    elif len(attribute_location) > 2:
-                        print('weird output', attribute_location)
+                    elif len(location) > 2:
+                        print('weird output', location)
                         attribute_location = None
                     else:
-                        attribute_location = attribute_location
+                        attribute_location = location
                     attribute_locations.append(attribute_location)
                 all_attribute_locations.append(attribute_locations)
-                print('done')
 
             assert len(atomic_facts)==len(topics)
             self.af_generator.save_cache()
@@ -247,11 +265,10 @@ class FactScorer(object):
                     self.save_cache()
 
         self.save_cache()
-        for prompt_index, prompt in enumerate(self.lm.attribute_prompts):
+        for prompt_index, prompt in enumerate(self.lm.attributes):
             print(self.lm.attributes[prompt_index])
             correct = 0.0
             total = 0.0
-            print(all_attribute_scores)
             for attribute_scores in all_attribute_scores:
                 if attribute_scores[prompt_index] != None:
                     if attribute_scores[prompt_index] == True:
